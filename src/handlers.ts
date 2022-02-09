@@ -2,6 +2,7 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import { getListPokemon, getPokemonFullTypes, getPokemonWithStat } from "./services/pokemon.service";
 import { PokemonWithStats } from "./models/PokemonWithStats";
 import { Type } from "./models/Type";
+import * as createError from "http-errors";
 
 const formatPokemon = (pokemon: PokemonWithStats, types: Type[]) => {
     return {
@@ -11,10 +12,13 @@ const formatPokemon = (pokemon: PokemonWithStats, types: Type[]) => {
 }
 
 const getPokemonInformation = async (name) => {
-    const pokemon = await getPokemonWithStat(name);
-    if (!pokemon) {
-        throw new Error(`Pokémon ${ name } is not found !`);
-    }
+    const pokemon = await getPokemonWithStat(name).catch(err => {
+        if (err.response.status === 404) {
+            throw createError(404, `Pokémon ${ name } is not found !`)
+        } else {
+            throw createError(500, err.response.data)
+        }
+    });
 
     const types = await getPokemonFullTypes(pokemon);
 
